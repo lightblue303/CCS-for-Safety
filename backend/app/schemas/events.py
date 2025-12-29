@@ -19,33 +19,30 @@ class DeviceInfo(BaseModel):
 # -------------------------
 class EventInfo(BaseModel):
     type: str = Field(..., example="FALL_DETECTED", description="Event type")
-    occurred_at: datetime = Field(..., description="Event occurrence time in UTC (ISO-8601)")
-    severity: str = Field(default="critical", description="info | warn | critical")
-    confidence: Optional[float] = Field(
-        default=None, ge=0.0, le=1.0, description="Detection confidence (0.0 ~ 1.0)"
+    occurred_at: datetime = Field(
+        ..., description="Event occurrence time in UTC (ISO-8601)"
+    )
+    severity: str = Field(
+        default="critical", description="info | warn | critical"
     )
 
 
 # -------------------------
-# Location 정보 (어디서)
+# Location 정보 (지도 표시용 좌표)
 # -------------------------
 class LocationInfo(BaseModel):
-    scheme: str = Field(..., example="zone", description="zone | geo")
-    site: Optional[str] = Field(default=None, description="Site/factory identifier")
-    zone: Optional[str] = Field(default=None, description="Zone/line identifier")
-    lat: Optional[float] = Field(default=None, description="Latitude")
-    lng: Optional[float] = Field(default=None, description="Longitude")
+    lat: float = Field(..., description="Latitude")
+    lng: float = Field(..., description="Longitude")
 
 
 # -------------------------
-# 최종 수신 요청 (ESP32 → 서버)
+# 최종 이벤트 수신 모델
 # -------------------------
 class EventIngestRequest(BaseModel):
     device: DeviceInfo
     event: EventInfo
-    location: Optional[LocationInfo] = None
+    location: LocationInfo
     payload: Optional[Dict[str, Any]] = Field(
         default=None,
         description="Optional raw/extra data (sensor metrics, model scores, etc.)",
     )
-    
