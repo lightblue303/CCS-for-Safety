@@ -1,23 +1,30 @@
 # backend/app/services/events_service.py
 from sqlalchemy.orm import Session
-
 from backend.app.models.event import Event
-from backend.app.schemas.events import EventIngestRequest
+from backend.app.api.v1.schemas.events import EventCreateRequest
 
-
-def create_event(db: Session, req: EventIngestRequest) -> Event:
-    row = Event(
+# POST
+def create_event(db: Session, req: EventCreateRequest):
+    event = Event(
         device_id=req.device.id,
         device_type=req.device.type,
         event_type=req.event.type,
         occurred_at=req.event.occurred_at,
-        lat=req.location.lat,
-        lng=req.location.lng,
+        lat=req.location.lat if req.location else None,
+        lng=req.location.lng if req.location else None,
         payload=req.payload,
     )
+    db.add(event)
+    db.commit()
+    db.refresh(event)
+    return event
 
-    db.add(row)      # INSERT 준비
-    db.commit()      # 실제 INSERT 실행
-    db.refresh(row)  # DB가 만든 id 등 다시 읽기
 
-    return row
+# GET
+def get_events(db: Session, limit: int = 50):
+    return (
+        db.query(Event)
+        .order_by(Event.occurred_at.desc())
+        .limit(limit)
+        .all()
+    )
