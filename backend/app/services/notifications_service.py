@@ -1,21 +1,17 @@
 # backend/app/services/notifications_service.py
 from __future__ import annotations
 
-import time
 from datetime import datetime, timezone
+from typing import Optional, List
 
-from sqlalchemy.orm import Session
-
+import time
 from fastapi import HTTPException
+from sqlalchemy.orm import Session
 
 from backend.app.core.database import SessionLocal
 from backend.app.models.notification import Notification
-
-
-def _utcnow() -> datetime:
-    """UTC timezone-aware now"""
-    return datetime.now(timezone.utc)
-
+from backend.app.services.subscriptions_service import get_active_tokens_for_device_role
+from backend.app.models.event import Event  # 너희 Event 모델 경로에 맞게 수정 필요
 
 def create_notification(
     db: Session,
@@ -36,21 +32,19 @@ def create_notification(
     db.refresh(n)
     return n
 
-
 def mark_sent(db: Session, *, notification_id: int) -> Notification:
     """
-    발송 성공 처리: status=SENT, sent_at=now(UTC)
+    발송 성공 처리: status=SENT, sent_at=now
     """
     n = db.query(Notification).filter(Notification.id == notification_id).one_or_none()
     if n is None:
         raise HTTPException(status_code=404, detail="notification not found")
 
     n.status = "SENT"
-    n.sent_at = _utcnow()
+    n.sent_at = datetime.now(timezone.utc)
     db.commit()
     db.refresh(n)
     return n
-
 
 def mark_failed(db: Session, *, notification_id: int) -> Notification:
     """
@@ -65,8 +59,7 @@ def mark_failed(db: Session, *, notification_id: int) -> Notification:
     db.refresh(n)
     return n
 
-
-def mark_acked(db: Session, *, notification_id: int) -> Notification:
+def mark_acked(db: Session, notification_id: int) -> Notification:
     """
     ACK 처리
     """
@@ -80,11 +73,10 @@ def mark_acked(db: Session, *, notification_id: int) -> Notification:
         raise HTTPException(status_code=404, detail="notification not found")
 
     n.status = "ACKED"
-    n.ack_at = _utcnow()
+    n.ack_at = datetime.now(timezone.utc)
     db.commit()
     db.refresh(n)
     return n
-
 
 def escalate_to_admin_if_unacked(
     *,
@@ -94,10 +86,8 @@ def escalate_to_admin_if_unacked(
     """
     작업자 알림 생성 후 timeout_seconds 동안 ACK 대기
     - ACK가 오면 아무 일도 하지 않음
-    - ACK가 없으면 관리자 알림(ADMIN_FCM) 생성(중복 방지)
-    - 작업자 알림 status=TIMEOUT 처리
+    - ACK가 없으면 관리자 알림(ADMIN_FCM) 생성 (device 구독 기반)
     """
-
     # 1) ACK 대기
     time.sleep(timeout_seconds)
 
@@ -109,41 +99,34 @@ def escalate_to_admin_if_unacked(
             .filter(Notification.id == worker_notification_id)
             .one_or_none()
         )
-
         if worker_n is None:
             return
 
-        # 3) 이미 ACK 처리된 경우 종료
-        if worker_n.status == "ACKED" or worker_n.ack_at is not None:
+        # 이미 ACK 처리되었으면 종료
+        if worker_n.status == "ACKED" and worker_n.ack_at is not None:
             return
 
-        # 4) 관리자 알림 중복 생성 방지
-        existing_admin = (
-            db.query(Notification)
-            .filter(
-                Notification.event_id == worker_n.event_id,
-                Notification.channel == "ADMIN_FCM",
-            )
-            .one_or_none()
-        )
-        if existing_admin is not None:
-            # 이미 관리자 알림이 있으면 작업자만 TIMEOUT 처리하고 종료
-            worker_n.status = "TIMEOUT"
+        # 3) 이벤트에서 device_key 확보
+        ev = db.query(Event).filter(Event.id == worker_n.event_id).one_or_none()
+        if ev is None:
+            return
+
+        # 4) WORKER TIMEOUT 처리
+        worker_n.status = "TIMEOUT"
+
+        # 5) device 구독된 ADMIN 토큰 수만큼 ADMIN_FCM 알림 row 생성
+        admin_tokens = get_active_tokens_for_device_role(db, device_key=ev.device_id, role="ADMIN")
+        if not admin_tokens:
             db.commit()
             return
 
-        # 5) 관리자 알림 생성
-        admin_n = Notification(
-            event_id=worker_n.event_id,
-            channel="ADMIN_FCM",
-            status="PENDING",
-        )
-        db.add(admin_n)
-
-        # 6) 작업자 알림 상태 TIMEOUT 처리
-        worker_n.status = "TIMEOUT"
+        for _ in admin_tokens:
+            db.add(Notification(
+                event_id=worker_n.event_id,
+                channel="ADMIN_FCM",
+                status="PENDING",
+            ))
 
         db.commit()
-
     finally:
         db.close()

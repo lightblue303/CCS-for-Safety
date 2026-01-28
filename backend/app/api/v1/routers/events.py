@@ -1,5 +1,5 @@
 from typing import List
-from fastapi import APIRouter, Depends, status, BackgroundTasks
+from fastapi import APIRouter, Depends, status, BackgroundTasks, HTTPException
 from sqlalchemy.orm import Session
 
 from backend.app.services.events_service import get_events
@@ -21,26 +21,25 @@ def ingest_event(
     # 1) 이벤트 저장
     saved = create_event(db, req)
 
-    # 2) 작업자 알림 row 생성 (DB)
-    worker_n = create_notification(
-        db,
-        event_id=saved.id,
-        channel="WORKER_FCM",
-    )
+    # 2) device_id 기준 WORKER 구독 토큰 존재 확인
+    worker_tokens = get_active_tokens_for_device_role(db, device_key=saved.device_id, role="WORKER")
+    if not worker_tokens:
+        # 여기 정책은 선택:
+        # WORKER가 없으면 즉시 ADMIN으로만 보낸다(=바로 ADMIN notification 생성)
+        admin_n = create_notification(db, event_id=saved.id, channel="ADMIN_FCM")
+        return {"status": "ok", "event_id": saved.id, "admin_notification_id": admin_n.id, "note": "no worker subscription"}
 
-    # 3) 타임아웃 백그라운드 작업 등록
-    #    - timeout_seconds 후 ack 없으면 ADMIN_FCM 알림 row 생성 + WORKER TIMEOUT 처리
+    # 3) 작업자 알림 row 생성
+    worker_n = create_notification(db, event_id=saved.id, channel="WORKER_FCM")
+
+    # 4) timeout 백그라운드 등록 (ACK 없으면 ADMIN 알림 row 생성)
     background_tasks.add_task(
         escalate_to_admin_if_unacked,
         worker_notification_id=worker_n.id,
-        timeout_seconds=30,  # 필요 시 10초로 낮춰 테스트
+        timeout_seconds=30,
     )
 
-    return {
-        "status": "ok",
-        "event_id": saved.id,
-        "worker_notification_id": worker_n.id,
-    }
+    return {"status": "ok", "event_id": saved.id, "worker_notification_id": worker_n.id}
 
 @router.get(
     "",
