@@ -8,6 +8,9 @@ from backend.app.schemas.events import EventIngestRequest
 from backend.app.core.deps import get_db
 from backend.app.services.events_service import create_event
 from backend.app.services.notifications_service import (create_notification, mark_sent, escalate_to_admin_if_unacked,)
+from backend.app.services.push_tokens_service import (
+    get_active_tokens_for_device_role,
+)
 
 router = APIRouter(prefix="/api/v1/events", tags=["events"])
 
@@ -21,8 +24,12 @@ def ingest_event(
     # 1) 이벤트 저장
     saved = create_event(db, req)
 
-    # 2) device_id 기준 WORKER 구독 토큰 존재 확인
-    worker_tokens = get_active_tokens_for_device_role(db, device_key=saved.device_id, role="WORKER")
+    # 2) device_key 기준 WORKER 구독 토큰 존재 확인
+    worker_tokens = get_active_tokens_for_device_role(
+        db,
+        device_key=saved.device_key,
+        role="WORKER",
+    )
     if not worker_tokens:
         # 여기 정책은 선택:
         # WORKER가 없으면 즉시 ADMIN으로만 보낸다(=바로 ADMIN notification 생성)

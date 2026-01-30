@@ -9,7 +9,7 @@ class Event(Base):
 
     id = Column(BigInteger, primary_key=True, autoincrement=True)
 
-    device_id = Column(String(64), nullable=False)
+    device_key = Column(String(64), nullable=False)
     device_type = Column(String(32), nullable=False)
 
     event_type = Column(String(64), nullable=False)

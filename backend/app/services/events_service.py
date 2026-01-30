@@ -1,12 +1,12 @@
 # backend/app/services/events_service.py
 from sqlalchemy.orm import Session
 from backend.app.models.event import Event
-from backend.app.api.v1.schemas.events import EventCreateRequest
+from backend.app.schemas.events import EventIngestRequest
 
 # POST
-def create_event(db: Session, req: EventCreateRequest):
+def create_event(db: Session, req: EventIngestRequest):
     event = Event(
-        device_id=req.device.id,
+        device_key=req.device.device_key,
         device_type=req.device.type,
         event_type=req.event.type,
         occurred_at=req.event.occurred_at,

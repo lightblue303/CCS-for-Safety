@@ -10,7 +10,7 @@ from pydantic import BaseModel, Field
 # Device 정보 (누가 보냈는지)
 # -------------------------
 class DeviceInfo(BaseModel):
-    id: str = Field(..., description="ESP32 device identifier (e.g. wearable-001)")
+    device_key: str = Field(..., description="ESP32 device identifier (e.g. wearable-001)")
     type: str = Field(..., description="Device type (e.g. wearable)")
 
 
