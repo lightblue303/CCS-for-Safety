@@ -1,0 +1,36 @@
+cat > .gitignore <<'EOF'
+# ===============================
+# Python / Virtual Environment
+# ===============================
+.venv/
+win-venv/
+__pycache__/
+**/__pycache__/
+*.pyc
+
+# ===============================
+# Environment variables (SECRET)
+# ===============================
+.env
+.env.*
+Code/backend/.env
+
+# ===============================
+# Logs & Test Artifacts
+# ===============================
+*.log
+.pytest_cache/
+
+# ===============================
+# Editor backup files
+# ===============================
+*~
+*.swp
+
+# ===============================
+# OS / IDE
+# ===============================
+.vscode/
+.idea/
+.DS_Store
+EOF
