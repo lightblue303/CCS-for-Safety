@@ -1,0 +1,23 @@
+*.iml
+.gradle
+/local.properties
+/.idea/caches
+/.idea/libraries
+/.idea/modules.xml
+/.idea/workspace.xml
+/.idea/navEditor.xml
+/.idea/assetWizardSettings.xml
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+local.properties
+# Firebase 설정 파일 (보안상 절대 올리면 안 됨)
+google-services.json
+
+# 빌드된 APK 파일 (용량이 크고 보안상 제외)
+*.apk
+
+# 로그 파일 및 임시 파일
+*.log
