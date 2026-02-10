@@ -1,20 +1,34 @@
-# ===== Python =====
-__pycache__/
-*.pyc
-*.pyo
-
-# ===== Virtual Environments =====
+# ===============================
+# Python / Virtual Environment
+# ===============================
 .venv/
 win-venv/
+__pycache__/
+**/__pycache__/
+*.pyc
 
-# ===== Environment files (secrets) =====
+# ===============================
+# Environment variables (SECRET)
+# ===============================
 .env
+.env.*
+Code/backend/.env
 
-# ===== Logs / caches =====
+# ===============================
+# Logs & Test Artifacts
+# ===============================
 *.log
 .pytest_cache/
 
-# ===== Editor/OS =====
+# ===============================
+# Editor backup files
+# ===============================
 *~
-.gitignore~
+*.swp
+
+# ===============================
+# OS / IDE
+# ===============================
+.vscode/
+.idea/
 .DS_Store
