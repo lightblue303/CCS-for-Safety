@@ -32,3 +32,10 @@ Code/backend/.env
 .vscode/
 .idea/
 .DS_Store
+
+# ===============================
+# Secrets (Firebase, etc.)
+# ===============================
+Code/backend/secrets/
+**/secrets/
+*.json

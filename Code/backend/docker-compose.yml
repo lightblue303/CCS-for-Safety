@@ -31,6 +31,10 @@ services:
       db:
         condition: service_healthy
     restart: unless-stopped
+    environment:
+      - GOOGLE_APPLICATION_CREDENTIALS=/run/secrets/firebase.json
+    volumes:
+      - ./secrets/firebase-service-account.json:/run/secrets/firebase.json:ro
 
 volumes:
   db_data:
