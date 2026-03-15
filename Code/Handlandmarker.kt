@@ -8,35 +8,46 @@ import com.google.mediapipe.framework.image.MPImage
 import com.google.mediapipe.tasks.vision.core.RunningMode
 import com.google.mediapipe.tasks.vision.handlandmarker.HandLandmarkerResult
 
-class HandLandmarkDetector( // 손 랜드마크 탐지 함수
+class HandLandmarkDetector(
     context: Context,
     private val listener: (HandLandmarkerResult, Int, Int) -> Unit
 ) {
 
-    private val landmarker: HandLandmarker
+    private lateinit var landmarker: HandLandmarker
 
     init {
-        val options = HandLandmarkerOptions.builder()
-            .setBaseOptions(
-                BaseOptions.builder()
-                    .setModelAssetPath("hand_landmarker.task") // 손 인식 모델 설정
-                    .build()
-            )
-            .setRunningMode(RunningMode.LIVE_STREAM) // 실시간 인식 모드
-            .setNumHands(2) // 손 인식 가능한 개수
-            .setResultListener { result, input ->
-                listener(result, input.height, input.width)
-            }
-            .build()
+        try {
+            val options = HandLandmarkerOptions.builder()
+                .setBaseOptions(
+                    BaseOptions.builder()
+                        .setModelAssetPath("hand_landmarker.task")
+                        .build()
+                )
+                .setRunningMode(RunningMode.LIVE_STREAM)
+                .setNumHands(2)
+                .setResultListener { result : HandLandmarkerResult, input : MPImage ->
+                    // 항상 전달 → OverlayView에서 처리
+                    listener(result, input.height, input.width)
+                }
+                .build()
 
-        landmarker = HandLandmarker.createFromOptions(context, options)
+            landmarker = HandLandmarker.createFromOptions(context, options)
+
+        } catch (e: Exception) {
+            e.printStackTrace()
+            throw RuntimeException("HandLandmarker init failed", e)
+        }
     }
 
-    fun detectAsync(mpImage: MPImage, timestamp: Long) { // 손 인식 싱크 맞춰주는 함수
-        landmarker.detectAsync(mpImage, timestamp)
+    fun detectAsync(mpImage: MPImage, timestamp: Long) {
+        if (::landmarker.isInitialized) {
+            landmarker.detectAsync(mpImage, timestamp)
+        }
     }
 
     fun close() {
-        landmarker.close()
+        if (::landmarker.isInitialized) {
+            landmarker.close()
+        }
     }
 }

@@ -41,4 +41,5 @@ object BitmapUtils {
             true
         )
     }
+
 }
