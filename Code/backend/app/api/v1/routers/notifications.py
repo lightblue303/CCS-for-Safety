@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 
 from app.core.deps import get_db
 from app.api.v1.schemas.notifications import NotificationAckRequest
-from app.services.notifications_service import mark_acked
+
 
 router = APIRouter(prefix="/api/v1/notifications", tags=["notifications"])
 

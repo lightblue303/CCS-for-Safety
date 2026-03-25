@@ -1,4 +1,4 @@
-from sqlalchemy import Column, BigInteger, String, DateTime, DECIMAL, JSON
+from sqlalchemy import Column, BigInteger, String, DateTime, DECIMAL, JSON, ForeignKey
 from sqlalchemy.sql import func
 
 from app.core.database import Base
@@ -10,6 +10,7 @@ class Event(Base):
     id = Column(BigInteger, primary_key=True, autoincrement=True)
 
     device_key = Column(String(64), nullable=False)
+    device_fk = Column(BigInteger, ForeignKey("devices.id"), nullable=True)
     device_type = Column(String(32), nullable=False)
 
     event_type = Column(String(64), nullable=False)

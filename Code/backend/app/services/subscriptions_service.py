@@ -1,10 +1,11 @@
 # backend/app/services/subscriptions_service.py
-from sqlalchemy.orm import Session
 from fastapi import HTTPException
-from typing import List
+from sqlalchemy.orm import Session
+
 from app.models.device import Device
-from app.models.push_token import PushToken
 from app.models.device_subscription import DeviceSubscription
+from app.models.push_token import PushToken
+
 
 def subscribe_device(
     db: Session,
@@ -15,11 +16,12 @@ def subscribe_device(
     role: str,
 ) -> DeviceSubscription:
     """
-    device_key(=events.device_id) 기준으로 디바이스 찾고,
-    token 찾아서 구독 생성.
+    device_key 기준으로 디바이스를 찾고,
+    등록된 push token을 찾아 구독을 생성/활성화한다.
 
-    WORKER 1:1을 “강제”하고 싶으면:
-    - 해당 device_key의 WORKER 활성 구독을 찾아 is_active=False 처리 후 새로 생성(또는 교체)
+    정책:
+    - WORKER는 1:1 강제 가능: 기존 활성 WORKER 구독은 비활성화
+    - ADMIN은 다수 구독 허용
     """
     device = db.query(Device).filter(Device.device_key == device_key).one_or_none()
     if device is None:
@@ -28,13 +30,23 @@ def subscribe_device(
         db.commit()
         db.refresh(device)
 
-    pt = db.query(PushToken).filter(PushToken.token == token, PushToken.is_active == True).one_or_none()
-    if pt is None:
-        raise HTTPException(status_code=400, detail="push token not registered or inactive")
+    push_token = (
+        db.query(PushToken)
+        .filter(
+            PushToken.token == token,
+            PushToken.is_active == True,
+        )
+        .one_or_none()
+    )
+    if push_token is None:
+        raise HTTPException(
+            status_code=400,
+            detail="push token not registered or inactive",
+        )
 
-    # (옵션) WORKER 1:1 강제: 기존 WORKER 활성 구독 비활성화
+    # WORKER 1:1 정책 유지
     if role == "WORKER":
-        old = (
+        old_subscriptions = (
             db.query(DeviceSubscription)
             .filter(
                 DeviceSubscription.device_id == device.id,
@@ -43,60 +55,55 @@ def subscribe_device(
             )
             .all()
         )
-        for s in old:
-            s.is_active = False
+        for sub in old_subscriptions:
+            sub.is_active = False
 
-    # upsert 느낌으로: 이미 있으면 활성화만
-    sub = (
+    subscription = (
         db.query(DeviceSubscription)
         .filter(
             DeviceSubscription.device_id == device.id,
-            DeviceSubscription.push_token_id == pt.id,
+            DeviceSubscription.push_token_id == push_token.id,
             DeviceSubscription.role == role,
         )
         .one_or_none()
     )
-    if sub is None:
-        sub = DeviceSubscription(
+
+    if subscription is None:
+        subscription = DeviceSubscription(
             device_id=device.id,
-            push_token_id=pt.id,
+            push_token_id=push_token.id,
             role=role,
             is_active=True,
         )
-        db.add(sub)
+        db.add(subscription)
     else:
-        sub.is_active = True
+        subscription.is_active = True
 
     db.commit()
-    db.refresh(sub)
-    return sub
+    db.refresh(subscription)
+    return subscription
+
 
 def get_active_tokens_for_device_role(
     db: Session,
     *,
     device_key: str,
     role: str,
-) -> List[PushToken]:
-    device = db.query(Device).filter(Device.device_key == device_key).one_or_none()
-    if device is None:
-        return []
-
-    subs = (
-        db.query(DeviceSubscription)
+) -> list[str]:
+    """
+    device_key + role(WORKER / ADMIN)에 해당하는 활성 FCM 토큰 목록 조회
+    """
+    rows = (
+        db.query(PushToken.token)
+        .join(DeviceSubscription, PushToken.id == DeviceSubscription.push_token_id)
+        .join(Device, Device.id == DeviceSubscription.device_id)
         .filter(
-            DeviceSubscription.device_id == device.id,
+            Device.device_key == device_key,
             DeviceSubscription.role == role,
             DeviceSubscription.is_active == True,
+            PushToken.is_active == True,
         )
         .all()
     )
-    if not subs:
-        return []
 
-    token_ids = [s.push_token_id for s in subs]
-    tokens = (
-        db.query(PushToken)
-        .filter(PushToken.id.in_(token_ids), PushToken.is_active == True)
-        .all()
-    )
-    return tokens
+    return [row[0] for row in rows]
