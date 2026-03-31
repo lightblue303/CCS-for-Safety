@@ -38,4 +38,5 @@ Code/backend/.env
 # ===============================
 Code/backend/secrets/
 **/secrets/
-*.json
+firebase.json
+*serviceAccount*.json
