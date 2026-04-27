@@ -12,7 +12,7 @@ from app.services.worker_status_service import (
     get_worker_status,
 )
 
-router = APIRouter(prefix="/worker-status", tags=["worker-status"])
+router = APIRouter(prefix="/api/v1/worker-status", tags=["worker-status"])
 
 
 @router.post("")

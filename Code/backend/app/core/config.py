@@ -9,7 +9,8 @@ class Settings(BaseSettings):
     DB_USER: str
     DB_PASSWORD: str
     DB_NAME: str
-
+    
+    GOOGLE_APPLICATION_CREDENTIALS: str | None = None
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"

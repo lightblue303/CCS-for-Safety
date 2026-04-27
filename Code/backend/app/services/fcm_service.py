@@ -5,7 +5,7 @@ import firebase_admin
 from firebase_admin import credentials, messaging
 
 from app.models.event import Event
-
+from app.core.config import settings
 
 def get_firebase_app():
     """
@@ -14,7 +14,7 @@ def get_firebase_app():
     try:
         return firebase_admin.get_app()
     except ValueError:
-        cred_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
+        cred_path = settings.GOOGLE_APPLICATION_CREDENTIALS
         if not cred_path:
             raise RuntimeError("GOOGLE_APPLICATION_CREDENTIALS is not set")
 
@@ -68,7 +68,24 @@ def send_admin_push(*, event: Event, tokens: list[str]) -> dict:
 
     response = messaging.send_each_for_multicast(message)
 
+    errors = []
+    for idx, resp in enumerate(response.responses):
+        if not resp.success:
+            error_msg = str(resp.exception)
+            print(f"FCM failed token_index={idx}, token={tokens[idx][:20]}..., error={error_msg}")
+            errors.append({
+                "token_index": idx,
+                "token_prefix": tokens[idx][:20],
+                "error": error_msg,
+            })
+
+    print(
+        f"FCM result: success={response.success_count}, "
+        f"failure={response.failure_count}, errors={errors}"
+    )
+
     return {
         "success_count": response.success_count,
         "failure_count": response.failure_count,
+        "errors": errors,
     }
