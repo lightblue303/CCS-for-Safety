@@ -56,7 +56,8 @@
                 android:layout_marginTop="4dp"
                 android:text="배치 구역: A-1"
                 android:textColor="#757575"
-                android:textSize="14sp" />
+                android:textSize="14sp"
+                android:visibility="gone"/>
         </LinearLayout>
 
         <ImageView

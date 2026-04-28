@@ -13,3 +13,15 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+# 1. Firebase 서비스 계정 키 (가장 중요!)
+# 친구에게 보내준 그 JSON 파일입니다.
+*.json
+
+# 2. 만약 나중에 google-services.json만은 꼭 올리고 싶다면
+# 아래 줄의 주석(#)을 제거하세요. 하지만 지금은 다 막는 게 안전합니다.
+!google-services.json
+
+# 3. 로컬 환경 설정 파일 (중복 방지)
+local.properties
+.idea/

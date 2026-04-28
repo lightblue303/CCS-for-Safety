@@ -18,7 +18,7 @@ class WorkerAdapter(
 
         fun bind(worker: Worker) {
             tvName.text = worker.name
-            tvLocation.text = worker.location
+            //tvLocation.text = worker.location
             card.setOnClickListener { onClick(worker) }
         }
     }

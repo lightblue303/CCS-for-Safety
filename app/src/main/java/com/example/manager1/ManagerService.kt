@@ -60,11 +60,12 @@ class ManagerService : Service() {
     }
 
     private fun playAlarm() {
-        val uri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
+        // [수정] 시스템 기본음 대신 우리 사이렌 소리 경로 지정
+        val soundUri = android.net.Uri.parse("android.resource://${packageName}/${R.raw.emergency_sound}")
+
         if (ringtone == null) {
-            ringtone = RingtoneManager.getRingtone(applicationContext, uri)
+            ringtone = RingtoneManager.getRingtone(applicationContext, soundUri)
         }
-        // 이미 울리고 있더라도 다시 처음부터 울리거나 보장하도록 함
         ringtone?.play()
     }
 
