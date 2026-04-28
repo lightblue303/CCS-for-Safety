@@ -21,3 +21,11 @@ google-services.json
 
 # 로그 파일 및 임시 파일
 *.log
+
+# 1. Firebase 서비스 계정 키 (가장 중요!)
+# 파일 이름이 무엇이든 모든 JSON 파일을 방어합니다.
+*.json
+
+# 2. 로컬 환경 설정 파일 (중복 방지)
+local.properties
+.idea/
